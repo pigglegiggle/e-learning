@@ -12,15 +12,23 @@ A web-based e-learning platform built with Python FastAPI and MySQL.
 1. Clone the repository and navigate to the project directory
 2. Create a `.env` file in the root directory with the following variables:
    ```bash
-   # Database Configuration
-   MYSQL_ROOT_PASSWORD=yourpassword
-   MYSQL_DATABASE=elearning
-   MYSQL_USER=elearning_user
-   MYSQL_PASSWORD=userpassword
-   
-   # Application Configuration
-   SECRET_KEY=your-secret-key-here
-   DATABASE_URL=mysql://elearning_user:userpassword@db:3306/elearning
+      # Database Configuration
+      DB_HOST=localhost
+      DB_PORT=3306
+      DB_USER=root
+      DB_PASSWORD=
+      DB_NAME=elearning
+      
+      # MySQL Root Password (for Docker)
+      MYSQL_ROOT_PASSWORD=
+      
+      # Application Configuration
+      APP_HOST=0.0.0.0
+      APP_PORT=8000
+      DEBUG=True
+      
+      # Security
+      SECRET_KEY=your-secret-key-here-change-in-production
    ```
    Note: For development, you can leave these as default values or customize as needed.
 3. Build and start the containers:
