@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assignment Details - E-Learning Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="javascript:history.back()">
+                <i class="bi bi-arrow-left me-2"></i>Back to Course
+            </a>
+            
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle d-flex align-items-center text-white" href="#" role="button" data-bs-toggle="dropdown">
+                        <img src="/uploads/profiles/default.png" id="navProfileImg" class="rounded-circle me-2" width="32" height="32" onerror="this.src='https://via.placeholder.com/32'">
+                        <span id="navUserName"></span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/static/profile.html"><i class="bi bi-person-circle me-2"></i>Profile</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="logout()"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5 pt-3">
+        <div id="alertContainer"></div>
+
+        <!-- Assignment Details -->
+        <div class="card mb-4 mt-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h1 class="h3 mb-1" id="assignmentTitle">Loading...</h1>
+                        <div class="d-flex flex-wrap gap-3 mb-2">
+                            <small class="text-muted">
+                                <i class="bi bi-book"></i> <span id="courseTitle">-</span>
+                            </small>
+                            <small class="text-muted">
+                                <i class="bi bi-person"></i> <span id="instructorName">-</span>
+                            </small>
+                            <small class="text-muted">
+                                <i class="bi bi-calendar"></i> Due: <span id="dueDate">-</span>
+                            </small>
+                        </div>
+                        <span id="statusBadge" class="badge">-</span>
+                    </div>
+                    
+                    <!-- Admin buttons for instructors -->
+                    <div id="instructorActions" class="d-none">
+                        <button class="btn btn-outline-primary btn-sm me-2" onclick="editAssignment()">
+                            <i class="bi bi-pencil"></i> Edit
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="deleteAssignment()">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <h5>Description</h5>
+                <p id="assignmentDescription" class="mb-3">Loading...</p>
+
+                <div id="instructionFile" class="d-none">
+                    <h6>Instruction File</h6>
+                    <a id="instructionFileLink" href="#" class="btn btn-outline-primary btn-sm" target="_blank">
+                        <i class="bi bi-download"></i> Download Instructions
+                    </a>
+                </div>
+            </div>
+        </div>
+
+                    <!-- Student Submission Section -->
+        <div id="submissionSection" class="card d-none">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-upload"></i> Submit Assignment</h5>
+            </div>
+            <div class="card-body">
+                <form id="submissionForm">
+                    <div class="mb-3">
+                        <label for="submissionText" class="form-label">Submission Text (optional)</label>
+                        <textarea class="form-control" id="submissionText" rows="4" placeholder="Enter your submission text here..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="submissionFile" class="form-label">Upload File</label>
+                        <input type="file" class="form-control" id="submissionFile">
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Submit Assignment
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Submissions List (for instructors) -->
+        <div id="submissionsList" class="card d-none">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-list-ul"></i> Student Submissions</h5>
+            </div>
+            <div class="card-body">
+                <div id="submissionsContainer">
+                    <!-- Submissions will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentUser = null;
+        let currentAssignment = null;
+
+        // Show alert message
+        function showAlert(message, type = 'success') {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            alertContainer.innerHTML = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+        }
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        }
+
+        // Load assignment details
+        async function loadAssignmentDetails() {
+            const params = new URLSearchParams(window.location.search);
+            const assignmentId = params.get('id');
+            
+            if (!assignmentId) {
+                showAlert('Assignment ID not provided', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/assignments/${assignmentId}`);
+                const assignment = await response.json();
+                
+                currentAssignment = assignment;
+                
+                document.getElementById('assignmentTitle').textContent = assignment.title;
+                document.getElementById('assignmentDescription').textContent = assignment.description;
+                document.getElementById('courseTitle').textContent = assignment.course_title;
+                document.getElementById('instructorName').textContent = assignment.instructor_name;
+                document.getElementById('dueDate').textContent = new Date(assignment.due_date).toLocaleDateString();
+                
+                // Set status badge
+                const statusBadge = document.getElementById('statusBadge');
+                const dueDate = new Date(assignment.due_date);
+                const now = new Date();
+                
+                if (assignment.status === 'submitted') {
+                    statusBadge.className = 'badge bg-success';
+                    statusBadge.textContent = 'Submitted';
+                } else if (dueDate < now) {
+                    statusBadge.className = 'badge bg-danger';
+                    statusBadge.textContent = 'Overdue';
+                } else {
+                    statusBadge.className = 'badge bg-warning text-dark';
+                    statusBadge.textContent = 'Pending';
+                }
+                
+                // Show instruction file if exists
+                if (assignment.instruction_file) {
+                    document.getElementById('instructionFile').classList.remove('d-none');
+                    document.getElementById('instructionFileLink').href = assignment.instruction_file;
+                }
+                
+                // Show appropriate sections based on user role
+                if (currentUser.role === 'instructor') {
+                    document.getElementById('instructorActions').classList.remove('d-none');
+                    document.getElementById('submissionsList').classList.remove('d-none');
+                    loadSubmissions(assignmentId);
+                } else {
+                    document.getElementById('submissionSection').classList.remove('d-none');
+                }
+                
+            } catch (error) {
+                console.error('Error loading assignment:', error);
+                showAlert('Error loading assignment details', 'error');
+            }
+        }
+
+        // Load submissions for instructors
+        async function loadSubmissions(assignmentId) {
+            try {
+                const response = await fetch(`/api/assignments/${assignmentId}/submissions`);
+                const submissions = await response.json();
+                
+                const container = document.getElementById('submissionsContainer');
+                
+                if (submissions.length === 0) {
+                    container.innerHTML = '<p class="text-muted">No submissions yet.</p>';
+                    return;
+                }
+                
+                container.innerHTML = submissions.map(submission => `
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-person"></i> ${submission.student_name}
+                                </h6>
+                                <small class="text-muted">
+                                    <i class="bi bi-clock"></i> ${new Date(submission.submitted_at).toLocaleString()}
+                                </small>
+                            </div>
+                            
+                            ${submission.submission_text ? `
+                                <div class="mb-3">
+                                    <strong>Text:</strong>
+                                    <p class="mt-1">${submission.submission_text}</p>
+                                </div>
+                            ` : ''}
+                            
+                            ${submission.file_path ? `
+                                <div class="mb-3">
+                                    <a href="${submission.file_path}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-download"></i> Download File
+                                    </a>
+                                </div>
+                            ` : ''}
+                            
+                            <div class="border-top pt-3">
+                                <div class="row align-items-end">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Grade (0-100):</label>
+                                        <input type="number" class="form-control form-control-sm" 
+                                               min="0" max="100" value="${submission.grade || ''}" 
+                                               id="grade_${submission.id}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Feedback:</label>
+                                        <textarea class="form-control form-control-sm" rows="2" 
+                                                  id="feedback_${submission.id}" 
+                                                  placeholder="Enter feedback...">${submission.feedback || ''}</textarea>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button class="btn btn-primary btn-sm w-100" 
+                                                onclick="gradeSubmission(${submission.id})">
+                                            <i class="bi bi-check"></i> Grade
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Error loading submissions:', error);
+                showAlert('Error loading submissions', 'error');
+            }
+        }
+
+        // Submit assignment
+        document.getElementById('submissionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('assignment_id', currentAssignment.id);
+            formData.append('submission_text', document.getElementById('submissionText').value);
+            
+            const fileInput = document.getElementById('submissionFile');
+            if (fileInput.files[0]) {
+                formData.append('file', fileInput.files[0]);
+            }
+            
+            try {
+                const response = await fetch('/api/submissions/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${currentUser.id}`
+                    },
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    showAlert('Assignment submitted successfully!');
+                    document.getElementById('submissionForm').reset();
+                    document.getElementById('submissionSection').classList.add('d-none');
+                } else {
+                    const error = await response.json();
+                    showAlert(error.detail || 'Error submitting assignment', 'error');
+                }
+            } catch (error) {
+                console.error('Error submitting assignment:', error);
+                showAlert('Error submitting assignment', 'error');
+            }
+        });
+
+        // Grade submission
+        async function gradeSubmission(submissionId) {
+            const grade = document.getElementById(`grade_${submissionId}`).value;
+            const feedback = document.getElementById(`feedback_${submissionId}`).value;
+            
+            if (!grade) {
+                showAlert('Please enter a grade', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/submissions/${submissionId}/grade`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentUser.id}`
+                    },
+                    body: JSON.stringify({
+                        grade: parseInt(grade),
+                        feedback: feedback
+                    })
+                });
+                
+                if (response.ok) {
+                    showAlert('Grade submitted successfully!');
+                } else {
+                    const error = await response.json();
+                    showAlert(error.detail || 'Error submitting grade', 'error');
+                }
+            } catch (error) {
+                console.error('Error submitting grade:', error);
+                showAlert('Error submitting grade', 'error');
+            }
+        }
+
+        // Edit assignment
+        function editAssignment() {
+            window.location.href = `/static/assignment-form.html?edit=true&id=${currentAssignment.id}`;
+        }
+
+        // Delete assignment
+        async function deleteAssignment() {
+            if (!confirm('Are you sure you want to delete this assignment?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/assignments/${currentAssignment.id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${currentUser.id}`
+                    }
+                });
+                
+                if (response.ok) {
+                    showAlert('Assignment deleted successfully!');
+                    setTimeout(() => {
+                        history.back();
+                    }, 1500);
+                } else {
+                    const error = await response.json();
+                    showAlert(error.detail || 'Error deleting assignment', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting assignment:', error);
+                showAlert('Error deleting assignment', 'error');
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            const userData = localStorage.getItem('user');
+            if (!userData) {
+                window.location.href = '/';
+                return;
+            }
+            
+            currentUser = JSON.parse(userData);
+            
+            // Populate navbar user info
+            document.getElementById('navUserName').textContent = currentUser.full_name;
+            if (currentUser.profile_picture) {
+                document.getElementById('navProfileImg').src = currentUser.profile_picture;
+            }
+            
+            loadAssignmentDetails();
+        });
+    </script>
+</body>
+</html>

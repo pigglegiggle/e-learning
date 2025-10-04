@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Management - E-Learning Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body { 
+            padding-top: 76px; 
+            background-color: #f8f9fa; 
+        }
+        .profile-container { 
+            background: white; 
+            border-radius: 10px; 
+            padding: 2rem; 
+            margin-top: 20px; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .profile-picture { 
+            width: 150px; 
+            height: 150px; 
+            border-radius: 50%; 
+            object-fit: cover; 
+            border: 4px solid #0d6efd; 
+        }
+        .profile-picture-preview { 
+            margin-top: 20px; 
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#" id="backBtn">
+                <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+            </a>
+            
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle d-flex align-items-center text-white" href="#" role="button" data-bs-toggle="dropdown">
+                        <img src="/uploads/profiles/default.png" id="navProfileImg" class="rounded-circle me-2" width="32" height="32" onerror="this.src='https://via.placeholder.com/32'">
+                        <span id="navUserName"></span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/static/profile.html"><i class="bi bi-person-circle me-2"></i>Profile</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="logout()"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="profile-container">
+                    <div class="text-center mb-4">
+                        <h2 class="mb-3">
+                            <i class="bi bi-person-circle text-primary me-2"></i>Profile Management
+                        </h2>
+                        <img src="/uploads/profiles/default.png" id="profilePicture" class="profile-picture" onerror="this.src='https://via.placeholder.com/150'">
+                    </div>
+
+                    <form id="profileForm">
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-person me-2"></i>Full Name
+                            </label>
+                            <input type="text" class="form-control" id="fullName" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-envelope me-2"></i>Email
+                            </label>
+                            <input type="email" class="form-control" id="email" readonly>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-person-badge me-2"></i>Role
+                            </label>
+                            <input type="text" class="form-control" id="role" readonly>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-image me-2"></i>Profile Picture
+                            </label>
+                            <input type="file" class="form-control" id="profilePictureFile" accept="image/*">
+                            <div class="form-text">Upload a new profile picture (optional)</div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check me-2"></i>Update Profile
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="cancelBtn">
+                                <i class="bi bi-x me-2"></i>Cancel
+                            </button>
+                        </div>
+                        <div id="profileMessage" class="mt-3"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Picture Preview Modal -->
+    <div class="modal fade" id="profilePreviewModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-image me-2"></i>Profile Picture Preview
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="mb-3">
+                        <img id="previewImage" src="" class="img-fluid rounded-circle" style="width: 200px; height: 200px; object-fit: cover; border: 4px solid #0d6efd;">
+                    </div>
+                    <p class="text-muted">This will be your new profile picture</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x me-2"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" id="confirmProfilePicture">
+                        <i class="bi bi-check me-2"></i>Use This Photo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user) {
+                window.location.href = '/static/index.html';
+                return;
+            }
+
+            // Populate navbar user info
+            $('#navUserName').text(user.full_name);
+            if (user.profile_picture) {
+                $('#navProfileImg').attr('src', user.profile_picture);
+            }
+
+            $('#backBtn').click(function(e) {
+                e.preventDefault();
+                if (user.role === 'instructor') {
+                    window.location.href = '/static/instructor-dashboard.html';
+                } else {
+                    window.location.href = '/static/student-dashboard.html';
+                }
+            });
+
+            // Logout function
+            window.logout = function() {
+                localStorage.removeItem('user');
+                window.location.href = '/static/index.html';
+            };
+
+            let selectedFile = null; // Store the selected file
+
+            function loadProfile() {
+                $.ajax({
+                    url: '/api/profile/' + user.id,
+                    type: 'GET',
+                    success: function(profile) {
+                        $('#fullName').val(profile.full_name);
+                        $('#email').val(profile.email);
+                        $('#role').val(profile.role.charAt(0).toUpperCase() + profile.role.slice(1));
+
+                        if (profile.profile_picture) {
+                            $('#profilePicture').attr('src', profile.profile_picture);
+                        }
+                    }
+                });
+            }
+
+            $('#profilePictureFile').change(function() {
+                const file = this.files[0];
+                if (file) {
+                    // Check file size (limit to 5MB)
+                    if (file.size > 5 * 1024 * 1024) {
+                        alert('File size must be less than 5MB');
+                        $(this).val('');
+                        return;
+                    }
+
+                    // Check file type
+                    if (!file.type.startsWith('image/')) {
+                        alert('Please select an image file');
+                        $(this).val('');
+                        return;
+                    }
+
+                    selectedFile = file;
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        $('#previewImage').attr('src', e.target.result);
+                        $('#profilePreviewModal').modal('show');
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    selectedFile = null;
+                }
+            });
+
+            // Handle profile picture confirmation
+            $('#confirmProfilePicture').click(function() {
+                if (selectedFile) {
+                    // Update the main profile picture immediately for preview
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        $('#profilePicture').attr('src', e.target.result);
+                    };
+                    reader.readAsDataURL(selectedFile);
+                    
+                    $('#profilePreviewModal').modal('hide');
+                    
+                    // Show a message that changes will be saved when form is submitted
+                    const alert = `
+                        <div class="alert alert-info alert-dismissible fade show" role="alert">
+                            <i class="bi bi-info-circle me-2"></i>Profile picture updated! Click "Update Profile" to save changes.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    `;
+                    $('#profileMessage').html(alert);
+                }
+            });
+
+            // Handle modal close/cancel - reset file input
+            $('#profilePreviewModal').on('hidden.bs.modal', function () {
+                if (!$('#confirmProfilePicture').data('confirmed')) {
+                    $('#profilePictureFile').val('');
+                    selectedFile = null;
+                }
+                $('#confirmProfilePicture').removeData('confirmed');
+            });
+
+            $('#confirmProfilePicture').click(function() {
+                $(this).data('confirmed', true);
+            });
+
+            $('#profileForm').submit(function(e) {
+                e.preventDefault();
+
+                const formData = new FormData();
+                formData.append('full_name', $('#fullName').val());
+
+                // Use selectedFile instead of file input directly
+                if (selectedFile) {
+                    formData.append('file', selectedFile);
+                }
+
+                $.ajax({
+                    url: '/api/profile/' + user.id + '/update',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        const alert = `
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                <i class="bi bi-check-circle me-2"></i>Profile updated successfully!
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        `;
+                        $('#profileMessage').html(alert);
+
+                        // Update user data
+                        user.full_name = $('#fullName').val();
+                        if (response.profile_picture) {
+                            user.profile_picture = response.profile_picture;
+                            // Update both main profile picture and navbar picture
+                            $('#profilePicture').attr('src', response.profile_picture);
+                            $('#navProfileImg').attr('src', response.profile_picture);
+                        }
+                        
+                        // Update navbar name as well
+                        $('#navUserName').text(user.full_name);
+                        
+                        localStorage.setItem('user', JSON.stringify(user));
+                        
+                        // Clear selected file and reset input
+                        selectedFile = null;
+                        $('#profilePictureFile').val('');
+                    },
+                    error: function(xhr) {
+                        const errorMsg = xhr.responseJSON?.detail || 'Error updating profile';
+                        const alert = `
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <i class="bi bi-exclamation-triangle me-2"></i>${errorMsg}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        `;
+                        $('#profileMessage').html(alert);
+                    }
+                });
+            });
+
+            $('#cancelBtn').click(function() {
+                if (confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
+                    loadProfile(); // Reset form
+                    selectedFile = null; // Reset selected file
+                    $('#profilePictureFile').val(''); // Reset file input
+                    $('#profileMessage').empty();
+                }
+            });
+
+            loadProfile();
+        });
+    </script>
+</body>
+</html>
