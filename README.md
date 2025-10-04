@@ -1,4 +1,5 @@
 # E-Learning Platform
+[![E-Learning](https://img.shields.io/badge/E--Learning-1.0-blue?style=for-the-badge&logo=education)](https://your-website-or-link.com)
 
 A web-based e-learning platform built with Python FastAPI and MySQL.
 
